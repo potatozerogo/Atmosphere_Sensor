@@ -1,0 +1,14 @@
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
+atmosphere_sensor\croutine.o: d:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+atmosphere_sensor\croutine.o: d:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+atmosphere_sensor\croutine.o: ../Inc/FreeRTOSConfig.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/projdefs.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/portmacro.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/croutine.h
+atmosphere_sensor\croutine.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/list.h
