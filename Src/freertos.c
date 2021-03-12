@@ -30,10 +30,14 @@
 #include "string.h"
 #include "usart.h"
 #include "st7735.h"
-#include "voc.h"
+#include "modbus.h"
+#include "tvoc.h"
 #include "pm25.h"
 #include "sht2x_i2c.h"
 #include "key.h"
+#include "display_number.h"
+#include "data_colour.h"
+#include "user_config.h"
 
 /* USER CODE END Includes */
 
@@ -54,25 +58,31 @@
 
 /* Private variables ---------------------------------------------------------*/
 /* USER CODE BEGIN Variables */
-extern uint8_t Rx_uart2_buff[32];
-extern uint8_t Tx_uart2_buff[32];
-extern uint8_t UART2_Transmit_Flag;
-
-extern uint8_t Voc_Data_Buff[6];
-extern uint8_t PM25_Data_Buff[4];
-extern uint16_t ECO2_Data;
-extern uint16_t TVOC_Data;
-extern uint16_t CH2O_Data;
-extern uint16_t PM25_Data;
-extern uint16_t PM10_Data;
+extern uint8_t Tvoc_Data_Buff[6];
+extern uint8_t Pm25_Data_Buff[4];
+extern uint16_t Temperature_Data;
+extern uint16_t Humidity_Data;
+extern uint16_t Eco2_Data;
+extern uint16_t Tvoc_Data;
+extern uint16_t Ch2o_Data;
+extern uint16_t Pm25_Data;
+extern uint16_t Pm10_Data;
 extern int16_t Actual_Temperature_Data; 
 extern int16_t Actual_Humidity_Data;
+extern uint16_t Modbus_Memory_List[];//数据存储空间//modbus.c
 
-////===========调试用===============
-uint16_t Test_Counter;//调试累计
-////===========调试用===============
+extern _AQI_COLOUR_TABLE Co2_Colour_Table;//气体颜色对应表//data_colour.c 
+extern _AQI_COLOUR_TABLE Co_Colour_Table;//气体颜色对应表//data_colour.c 
+extern _AQI_COLOUR_TABLE Hcho_Colour_Table;//气体颜色对应表//data_colour.c 
+extern _AQI_COLOUR_TABLE Tvoc_Colour_Table;//气体颜色对应表//data_colour.c
+extern _AQI_COLOUR_TABLE Pm25_Colour_Table;//AQI颜色对应表//data_colour.c
+extern _AQI_COLOUR_TABLE Pm10_Colour_Table;//AQI颜色对应表//data_colour.c
+extern _TEMPERATURE_COLOUR_TABLE Temperature_Colour_Table;//温度颜色对应表//data_colour.c
+extern _TEMPERATURE_COLOUR_TABLE Humidity_Colour_Table;//湿度颜色对应表//data_colour.c	
 
-char Lcd_Display_Buff[8];
+extern unsigned int Display_Sensor_Type;//显示传感器类型main.c
+extern char *String_Display_Sensor_Type[7];//main.c
+extern char Lcd_Display_Buff[8];//main.c
 
 /* USER CODE END Variables */
 osThreadId defaultTaskHandle;
@@ -86,6 +96,8 @@ osSemaphoreId VOC_RX_CPLHandle;
 osStaticSemaphoreDef_t VOC_RX_CPLControlBlock;
 osSemaphoreId PM25_RX_CPLHandle;
 osStaticSemaphoreDef_t PM25_RX_CPLControlBlock;
+osSemaphoreId RUSH_DISPLAY_REQUESTHandle;
+osStaticSemaphoreDef_t RUSH_DISPLAY_REQUESTControlBlock;
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -143,6 +155,10 @@ void MX_FREERTOS_Init(void) {
   osSemaphoreStaticDef(PM25_RX_CPL, &PM25_RX_CPLControlBlock);
   PM25_RX_CPLHandle = osSemaphoreCreate(osSemaphore(PM25_RX_CPL), 1);
 
+  /* definition and creation of RUSH_DISPLAY_REQUEST */
+  osSemaphoreStaticDef(RUSH_DISPLAY_REQUEST, &RUSH_DISPLAY_REQUESTControlBlock);
+  RUSH_DISPLAY_REQUESTHandle = osSemaphoreCreate(osSemaphore(RUSH_DISPLAY_REQUEST), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -173,7 +189,7 @@ void MX_FREERTOS_Init(void) {
   AtmosphereHandle = osThreadCreate(osThread(Atmosphere), NULL);
 
   /* definition and creation of Modbus */
-  osThreadDef(Modbus, StartTask_Modbus, osPriorityAboveNormal, 0, 128);
+  osThreadDef(Modbus, StartTask_Modbus, osPriorityAboveNormal, 0, 192);
   ModbusHandle = osThreadCreate(osThread(Modbus), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -201,13 +217,15 @@ void StartDefaultTask(void const * argument)
 	switch(key_data)
 	{
 		case 1:
-			Standby_PM25();
+			Standby_Pm25();
 			break;
 		case 2:
-			Work_PM25();
+			Work_Pm25();
 			break;
 		case 3:
-			HAL_GPIO_TogglePin(LCD_LED_GPIO_Port,LCD_LED_Pin);
+			if(++Display_Sensor_Type >= _END_OF_DISPALY_TYPE)
+				Display_Sensor_Type = _TEMPERATURE;
+			osSemaphoreRelease(RUSH_DISPLAY_REQUESTHandle);
 			break;
 	}
 	key_data = 0;
@@ -216,6 +234,8 @@ void StartDefaultTask(void const * argument)
 		one_second_counter = 0;	
 //		LED_SYS_TOGGLE();
 	}
+	Temperature_Data = Actual_Temperature_Data - 20;
+	Humidity_Data = Actual_Humidity_Data;
 	osDelay(100);
   }
   /* USER CODE END StartDefaultTask */
@@ -234,33 +254,65 @@ void StartTask_LCD_Display(void const * argument)
   /* Infinite loop */
   for(;;)
   {
-	  
-	sprintf((char *)Lcd_Display_Buff,"%.1f C",(float)Actual_Temperature_Data/10); 
-	ST7735_PutStr7x11(104,  8,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-	sprintf((char *)Lcd_Display_Buff,"%.1f %%",(float)Actual_Humidity_Data/10);  
-	ST7735_PutStr7x11(88,  33,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-//    osDelay(1000);
-	  
-	sprintf((char *)Lcd_Display_Buff,"%d ppm",ECO2_Data);
-	ST7735_PutStr7x11(48,  58,"        ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	ST7735_PutStr7x11(48,  58,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",TVOC_Data);
-	ST7735_PutStr7x11(47,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	ST7735_PutStr7x11(47,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",CH2O_Data);
-	ST7735_PutStr7x11(124,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-	ST7735_PutStr7x11(124,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-//    osDelay(1000);
-	  
-	sprintf((char *)Lcd_Display_Buff,"%d",PM25_Data);
-	ST7735_PutStr7x11(47,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	ST7735_PutStr7x11(47,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",PM10_Data);
-	ST7735_PutStr7x11(117,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-	ST7735_PutStr7x11(117,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
-    osDelay(2000);
+	
+	ST7735_PutStr7x11(33,  8, String_Display_Sensor_Type[Display_Sensor_Type], COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
 
-	  
+	switch(Display_Sensor_Type)
+	{
+		case _TEMPERATURE:
+			ST7735_PutStr7x11(110,  82,"   'C", COLOR565_GREEN,COLOR565_BLACK);
+			ST7735_Put_3Bits_Big_Percent_Number(3, 40, (Temperature_Data), Set_Temperature_Colour((Temperature_Data), &Temperature_Colour_Table), COLOR565_BLACK);
+			break;
+		case _HUMIDITY:
+			ST7735_PutStr7x11(110,  82,"    %", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_3Bits_Big_Percent_Number(3, 40, Humidity_Data, Set_Temperature_Colour(Humidity_Data, &Temperature_Colour_Table), COLOR565_BLACK);
+			break;
+		case _PM25:
+			ST7735_PutStr7x11(110,  82,"ug/m3", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_4Bits_Big_Number(19, 40, Pm25_Data, Set_Aqi_Colour(Pm25_Data, &Pm25_Colour_Table), COLOR565_BLACK);
+			break;
+		case _PM10:
+			ST7735_PutStr7x11(110,  82,"ug/m3", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_4Bits_Big_Number(19, 40, Pm10_Data, Set_Aqi_Colour(Pm10_Data, &Pm10_Colour_Table), COLOR565_BLACK);
+			break;
+		case _ECO2:
+			ST7735_PutStr7x11(110,  82,"  ppm", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_4Bits_Big_Number(19, 40, Eco2_Data, Set_Aqi_Colour(Eco2_Data, &Co2_Colour_Table), COLOR565_BLACK);
+			break;
+		case _TVOC:
+			ST7735_PutStr7x11(110,  82,"  ppb", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_4Bits_Big_Number(19, 40, Tvoc_Data, Set_Aqi_Colour(Tvoc_Data, &Tvoc_Colour_Table), COLOR565_BLACK);
+			break;
+		case _CH2O:
+			ST7735_PutStr7x11(110,  82,"ug/m3", COLOR565_GREEN,COLOR565_BLACK); 
+			ST7735_Put_4Bits_Big_Number(19, 40, Ch2o_Data, Set_Aqi_Colour(Ch2o_Data, &Hcho_Colour_Table), COLOR565_BLACK);
+			break;
+//		case _ALL_SENSOR:
+//			sprintf((char *)Lcd_Display_Buff,"%.1f'C",(float)Actual_Temperature_Data/10); 
+//			ST7735_PutStr7x11(104,  8,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			sprintf((char *)Lcd_Display_Buff,"%.1f %%",(float)Actual_Humidity_Data/10);  
+//			ST7735_PutStr7x11(88,  33,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			sprintf((char *)Lcd_Display_Buff,"%d ppm",Eco2_Data);
+//			ST7735_PutStr7x11(48,  58,"        ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			ST7735_PutStr7x11(48,  58,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			sprintf((char *)Lcd_Display_Buff,"%d",Tvoc_Data);
+//			ST7735_PutStr7x11(47,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			ST7735_PutStr7x11(47,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			sprintf((char *)Lcd_Display_Buff,"%d",Ch2o_Data);
+//			ST7735_PutStr7x11(124,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			ST7735_PutStr7x11(124,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			sprintf((char *)Lcd_Display_Buff,"%d",Pm25_Data);
+//			ST7735_PutStr7x11(47,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			ST7735_PutStr7x11(47,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
+//			sprintf((char *)Lcd_Display_Buff,"%d",Pm10_Data);
+//			ST7735_PutStr7x11(117,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			ST7735_PutStr7x11(117,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
+//			break;
+		default:
+			break;
+	}
+	
+    osSemaphoreWait(RUSH_DISPLAY_REQUESTHandle,2000);
   }
   /* USER CODE END StartTask_LCD_Display */
 }
@@ -298,43 +350,43 @@ void StartTask_Atmosphere(void const * argument)
   for(;;)
   {
 	LED_SYS_OFF();	  
-	if(Get_Voc(Voc_Data_Buff) >= 0)
+	if(Get_Tvoc(Tvoc_Data_Buff) >= 0)
 	{
-		ECO2_Data = Voc_Data_Buff[0];
-		ECO2_Data = ECO2_Data << 8;
-		ECO2_Data += Voc_Data_Buff[1];
+		Eco2_Data = Tvoc_Data_Buff[0];
+		Eco2_Data = Eco2_Data << 8;
+		Eco2_Data += Tvoc_Data_Buff[1];
 
-		TVOC_Data = Voc_Data_Buff[2];
-		TVOC_Data = TVOC_Data << 8;
-		TVOC_Data += Voc_Data_Buff[3];	
+		Tvoc_Data = Tvoc_Data_Buff[2];
+		Tvoc_Data = Tvoc_Data << 8;
+		Tvoc_Data += Tvoc_Data_Buff[3];	
 
-		CH2O_Data = Voc_Data_Buff[4];
-		CH2O_Data = CH2O_Data << 8;
-		CH2O_Data += Voc_Data_Buff[5];
+		Ch2o_Data = Tvoc_Data_Buff[4];
+		Ch2o_Data = Ch2o_Data << 8;
+		Ch2o_Data += Tvoc_Data_Buff[5];
 	}
 	else
 	{
-		ECO2_Data = 999;
-		TVOC_Data = 999;
-		CH2O_Data = 999;
+		Eco2_Data = 999;
+		Tvoc_Data = 999;
+		Ch2o_Data = 999;
 	}
     osDelay(1000);
 	
 	LED_SYS_ON();
-	if(Get_PM25(PM25_Data_Buff) >= 0 )
+	if(Get_Pm25(Pm25_Data_Buff) >= 0 )
 	{
-		PM25_Data = PM25_Data_Buff[0];
-		PM25_Data = PM25_Data << 8;
-		PM25_Data += PM25_Data_Buff[1];
+		Pm25_Data = Pm25_Data_Buff[0];
+		Pm25_Data = Pm25_Data << 8;
+		Pm25_Data += Pm25_Data_Buff[1];
 		  
-		PM10_Data = PM25_Data_Buff[2];
-		PM10_Data = PM10_Data << 8;
-		PM10_Data += PM25_Data_Buff[3];	
+		Pm10_Data = Pm25_Data_Buff[2];
+		Pm10_Data = Pm10_Data << 8;
+		Pm10_Data += Pm25_Data_Buff[3];	
 	}
 	else
 	{
-		PM25_Data = 999;
-		PM10_Data = 999;
+		Pm25_Data = 999;
+		Pm10_Data = 999;
 	}
     osDelay(1000);
   }
@@ -354,6 +406,7 @@ void StartTask_Modbus(void const * argument)
   /* Infinite loop */
   for(;;)
   {
+	Task_Modbus();
     osDelay(1);
   }
   /* USER CODE END StartTask_Modbus */

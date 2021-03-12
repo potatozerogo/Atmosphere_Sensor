@@ -26,6 +26,8 @@ atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flas
 atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
+atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 atmosphere_sensor\main.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h
@@ -43,6 +45,7 @@ atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/sem
 atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h
 atmosphere_sensor\main.o: ../Inc/dma.h
 atmosphere_sensor\main.o: ../Inc/spi.h
+atmosphere_sensor\main.o: ../Inc/tim.h
 atmosphere_sensor\main.o: ../Inc/usart.h
 atmosphere_sensor\main.o: ../Inc/gpio.h
 atmosphere_sensor\main.o: d:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
@@ -51,5 +54,10 @@ atmosphere_sensor\main.o: ..\user\st7735.h
 atmosphere_sensor\main.o: ..\user\font5x7.h
 atmosphere_sensor\main.o: ..\user\font7x11.h
 atmosphere_sensor\main.o: ..\user\color565.h
-atmosphere_sensor\main.o: ..\user\voc.h
+atmosphere_sensor\main.o: ..\user\modbus.h
+atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
+atmosphere_sensor\main.o: ..\user\crc16.h
+atmosphere_sensor\main.o: ..\user\user_config.h
+atmosphere_sensor\main.o: ..\user\tvoc.h
+atmosphere_sensor\main.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 atmosphere_sensor\main.o: ..\user\pm25.h

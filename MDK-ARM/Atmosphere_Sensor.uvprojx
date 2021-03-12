@@ -338,7 +338,7 @@
               <MiscControls></MiscControls>
               <Define>USE_HAL_DRIVER,STM32F103xB</Define>
               <Undefine></Undefine>
-              <IncludePath>../Inc;                     ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;                     ../Drivers/STM32F1xx_HAL_Driver/Inc;                     ../Middlewares/Third_Party/FreeRTOS/Source/include;                     ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                     ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3;                     ../Drivers/CMSIS/Device/ST/STM32F1xx/Include;                     ../Drivers/CMSIS/Include;                     ..\user</IncludePath>
+              <IncludePath>../Inc;                         ../Drivers/STM32F1xx_HAL_Driver/Inc/Legacy;                         ../Drivers/STM32F1xx_HAL_Driver/Inc;                         ../Middlewares/Third_Party/FreeRTOS/Source/include;                         ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS;                         ../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3;                         ../Drivers/CMSIS/Device/ST/STM32F1xx/Include;                         ../Drivers/CMSIS/Include;                         ..\user</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -393,36 +393,6 @@
           <GroupName>Application/User</GroupName>
           <Files>
             <File>
-              <FileName>st7735.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\st7735.c</FilePath>
-            </File>
-            <File>
-              <FileName>voc.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\voc.c</FilePath>
-            </File>
-            <File>
-              <FileName>pm25.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\pm25.c</FilePath>
-            </File>
-            <File>
-              <FileName>bsp_i2c_gpio.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\bsp_i2c_gpio.c</FilePath>
-            </File>
-            <File>
-              <FileName>sht2x_i2c.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\sht2x_i2c.c</FilePath>
-            </File>
-            <File>
-              <FileName>key.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\user\key.c</FilePath>
-            </File>
-            <File>
               <FileName>main.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/main.c</FilePath>
@@ -448,6 +418,11 @@
               <FilePath>../Src/spi.c</FilePath>
             </File>
             <File>
+              <FileName>tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Src/tim.c</FilePath>
+            </File>
+            <File>
               <FileName>usart.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/usart.c</FilePath>
@@ -461,6 +436,11 @@
               <FileName>stm32f1xx_hal_msp.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Src/stm32f1xx_hal_msp.c</FilePath>
+            </File>
+            <File>
+              <FileName>stm32f1xx_hal_timebase_tim.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Src/stm32f1xx_hal_timebase_tim.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -606,6 +586,61 @@
               <FileName>port.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Middlewares/Third_Party/FreeRTOS/Source/portable/RVDS/ARM_CM3/port.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>User</GroupName>
+          <Files>
+            <File>
+              <FileName>bsp_i2c_gpio.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\bsp_i2c_gpio.c</FilePath>
+            </File>
+            <File>
+              <FileName>key.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\key.c</FilePath>
+            </File>
+            <File>
+              <FileName>pm25.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\pm25.c</FilePath>
+            </File>
+            <File>
+              <FileName>sht2x_i2c.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\sht2x_i2c.c</FilePath>
+            </File>
+            <File>
+              <FileName>st7735.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\st7735.c</FilePath>
+            </File>
+            <File>
+              <FileName>tvoc.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\tvoc.c</FilePath>
+            </File>
+            <File>
+              <FileName>display_number.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\display_number.c</FilePath>
+            </File>
+            <File>
+              <FileName>data_colour.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\data_colour.c</FilePath>
+            </File>
+            <File>
+              <FileName>crc16.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\crc16.c</FilePath>
+            </File>
+            <File>
+              <FileName>modbus.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\user\modbus.c</FilePath>
             </File>
           </Files>
         </Group>

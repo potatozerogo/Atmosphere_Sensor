@@ -26,5 +26,8 @@ atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash
 atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
+atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 atmosphere_sensor\key.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 atmosphere_sensor\key.o: ../Inc/main.h
+atmosphere_sensor\key.o: ..\user\user_config.h

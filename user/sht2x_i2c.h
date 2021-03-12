@@ -2,6 +2,7 @@
 #define __SHT2x_I2C_H
 
 #include "stm32f1xx_hal.h"
+#include "bsp_i2c_gpio.h"
 
 #define    TRIG_TEMP_MEASUREMENT_HM   0xE3 //command trig. temp meas. hold master
 #define    TRIG_HUMI_MEASUREMENT_HM   0xE5 //command trig. humidity meas. hold master
@@ -12,8 +13,9 @@
 #define    SOFT_RESET                 0xFE  //command soft reset
 
 
-void SHT2x_Init(void);
+int8_t SHT2x_Init(void);
 void SHT2x_SoftReset(void);
+uint16_t Read_SHT2x_Data(uint8_t command);
 int16_t Get_SHT2x_Temp(void);
 int16_t Get_SHT2x_Rh(void);
 void Task_TH_Sensor(void);

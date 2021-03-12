@@ -3,7 +3,7 @@
 
 
 #include <inttypes.h>
-
+#include "stm32f1xx.h"
 
 #define SHT2X_I2C_WR	0		/* Ð´¿ØÖÆbit */
 #define SHT2X_I2C_RD	1		/* ¶Á¿ØÖÆbit */

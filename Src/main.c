@@ -23,6 +23,7 @@
 #include "cmsis_os.h"
 #include "dma.h"
 #include "spi.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -31,7 +32,8 @@
 #include "stdio.h"
 #include "string.h"
 #include "st7735.h"
-#include "voc.h"
+#include "modbus.h"
+#include "tvoc.h"
 #include "pm25.h"
 /* USER CODE END Includes */
 
@@ -52,39 +54,31 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-
-uint16_t ECO2_Data;
-uint16_t TVOC_Data;
-uint16_t CH2O_Data;
 uint16_t Temperature_Data;
 uint16_t Humidity_Data;
-uint16_t PM25_Data;
-uint16_t PM10_Data;
+uint16_t Pm25_Data;
+uint16_t Pm10_Data;
+uint16_t Eco2_Data;
+uint16_t Tvoc_Data;
+uint16_t Ch2o_Data;
 
-//===========UART_START===============
-//uint8_t  New_Receive_Start_Flag = 0;//新一帧的标志
-//uint8_t  Rx_uart3_buff[32];//接收缓存
-//uint8_t  Receive_Last_Index = 0;//用来转递新一帧第一字节数据，它会被记录在上一帧结尾再后面的字节里。
-//uint8_t  Rx_uart3_buff_index = 0;//接收数据指针
-//uint8_t  Rx_uart3_Timer = 0;//接收数据帧结束延时,用于判读一帧数据结束，单位100us
-//===========UART_END=================
+unsigned int Display_Sensor_Type = 0;//显示传感器类型
+char *String_Display_Sensor_Type[8] = {"Temperature"," Humidity  ","    PM25   ","    PM10   ","    eCO2   ","    TVOC   ","    HCHO   ","    All"};
+char Lcd_Display_Buff[8];
 
 //===========外部变量_START================
 extern osSemaphoreId VOC_RX_CPLHandle;
 extern osSemaphoreId PM25_RX_CPLHandle;
-//===========外部变量_END================
 
 extern char Lcd_Display_Buff[8];
-extern uint8_t Voc_Data_Buff[6];
-extern uint8_t PM25_Data_Buff[4];
-extern uint16_t ECO2_Data;
-extern uint16_t TVOC_Data;
-extern uint16_t CH2O_Data;
-extern uint16_t PM25_Data;
-extern uint16_t PM10_Data;
+
+extern uint8_t Tvoc_Data_Buff[6];
+extern uint8_t Pm25_Data_Buff[4];
 extern int16_t Actual_Temperature_Data; 
 extern int16_t Actual_Humidity_Data;
 
+extern uint16_t * Modbus_Memory_Address;//modbus数据存储空间首地址modbus.c
+//===========外部变量_END================
 
 /* USER CODE END PV */
 
@@ -101,22 +95,11 @@ void MX_FREERTOS_Init(void);
 //串口接收完成回调
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-
 //======Uart1_START========	
-//	if(huart->Instance == USART1)
-//	{
-//		
-//		if(New_Receive_Start_Flag == 1)
-//		{
-//			New_Receive_Start_Flag = 0;
-//			Rx_uart1_buff[0] = Rx_uart1_buff[Receive_Last_Index];
-//			Rx_uart1_buff_index = 0;
-//		}
-//		Rx_uart1_buff_index++;
-//		Receive_Last_Index = Rx_uart1_buff_index;
-//		HAL_UART_Receive_IT(&huart1,&Rx_uart1_buff[Rx_uart1_buff_index],1);
-//		Rx_uart1_Timer = 0;
-//	}
+	if(huart->Instance == USART1)
+	{
+		Modbus_Uart_Rx_Int_Process();
+	}
 //======Uart1_END========	
 
 //======Uart2_START========	
@@ -132,10 +115,16 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		osSemaphoreRelease(VOC_RX_CPLHandle);
 	}	
 //======Uart3_END========
-	
 }
 
-
+//串口发送完成回调
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(huart->Instance == USART1)
+	{
+		Modbus_Uart_Tx_Complete_Process();	
+	}
+}
 
 /* USER CODE END 0 */
 
@@ -172,41 +161,51 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   MX_SPI1_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 //	HAL_UART_Transmit(&huart2,String_Statr,strlen((char *)String_Statr),10000);
 //	HAL_UART_Receive_IT(&huart2,Rx_uart2_buff,4);
 
-	ECO2_Data = 0;
-	TVOC_Data = 0;
-	CH2O_Data = 0;
+	Eco2_Data = 0;
+	Tvoc_Data = 0;
+	Ch2o_Data = 0;
 	Temperature_Data = 0;
 	Humidity_Data = 0;
-	PM25_Data = 0;
-	PM10_Data = 0;
+	Pm25_Data = 0;
+	Pm10_Data = 0;
+	
+	Modbus_Memory_Address = &Temperature_Data;
+	Init_Modbus();
+	HAL_TIM_Base_Start_IT(&htim4);//启动定时器4
 
 	ST7735_Init();
+	ST7735_Clear(COLOR565_BLACK);
 	ST7735_Clear(COLOR565_BLACK);
 	ST7735_Rect(0,0,159,127,COLOR565_RED);
 	ST7735_Rect(1,1,158,126,COLOR565_RED);
 	ST7735_HLine(1, 158, 26,COLOR565_RED);
-	ST7735_HLine(1, 158, 51,COLOR565_RED);
-	ST7735_HLine(1, 158, 76,COLOR565_RED);
-	ST7735_HLine(1, 158, 101,COLOR565_RED);
-	ST7735_VLine(79, 76, 126,COLOR565_RED);
+	
+//	ST7735_Rect(0,0,159,127,COLOR565_RED);
+//	ST7735_Rect(1,1,158,126,COLOR565_RED);
+//	ST7735_HLine(1, 158, 26,COLOR565_RED);
+//	ST7735_HLine(1, 158, 51,COLOR565_RED);
+//	ST7735_HLine(1, 158, 76,COLOR565_RED);
+//	ST7735_HLine(1, 158, 101,COLOR565_RED);
+//	ST7735_VLine(79, 76, 126,COLOR565_RED);
 
-	ST7735_PutStr7x11(5,  8, "Temperature:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(5,  33, "Humidity:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(5,  58, "eCO2:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(5,  83, "TVOC:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(82,  83, "CH2O:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(5,  108, "PM2.5:", COLOR565_RED,COLOR565_BLACK);
-	ST7735_PutStr7x11(82,  108, "PM10:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(5,  8, "Temperature:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(5,  33, "Humidity:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(5,  58, "eCO2:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(5,  83, "TVOC:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(82,  83, "CH2O:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(5,  108, "PM2.5:", COLOR565_RED,COLOR565_BLACK);
+//	ST7735_PutStr7x11(82,  108, "PM10:", COLOR565_RED,COLOR565_BLACK);
 	
 	LCD_LED_ON();
 	
 	HAL_Delay(5000);
-	Init_Voc();
-	Init_PM25();
+	Init_Tvoc();
+	Init_Pm25();
 	HAL_Delay(500);
 	
   /* USER CODE END 2 */
@@ -225,44 +224,44 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 	LED_SYS_OFF();	  
-	if(Get_Voc(Voc_Data_Buff) >= 0)
+	if(Get_Tvoc(Tvoc_Data_Buff) >= 0)
 	{
-		ECO2_Data = Voc_Data_Buff[0];
-		ECO2_Data = ECO2_Data << 8;
-		ECO2_Data += Voc_Data_Buff[1];
+		Eco2_Data = Tvoc_Data_Buff[0];
+		Eco2_Data = Eco2_Data << 8;
+		Eco2_Data += Tvoc_Data_Buff[1];
 
-		TVOC_Data = Voc_Data_Buff[2];
-		TVOC_Data = TVOC_Data << 8;
-		TVOC_Data += Voc_Data_Buff[3];	
+		Tvoc_Data = Tvoc_Data_Buff[2];
+		Tvoc_Data = Tvoc_Data << 8;
+		Tvoc_Data += Tvoc_Data_Buff[3];	
 
-		CH2O_Data = Voc_Data_Buff[4];
-		CH2O_Data = CH2O_Data << 8;
-		CH2O_Data += Voc_Data_Buff[5];
+		Ch2o_Data = Tvoc_Data_Buff[4];
+		Ch2o_Data = Ch2o_Data << 8;
+		Ch2o_Data += Tvoc_Data_Buff[5];
 	}
 	else
 	{
-		ECO2_Data = 9999;
-		TVOC_Data = 9999;
-		CH2O_Data = 9999;
+		Eco2_Data = 9999;
+		Tvoc_Data = 9999;
+		Ch2o_Data = 9999;
 	}
 
 //  HAL_Delay(1000);
 	LED_SYS_ON();
 	  
-	if(Get_PM25(PM25_Data_Buff) >= 0 )
+	if(Get_Pm25(Pm25_Data_Buff) >= 0 )
 	{
-		PM25_Data = PM25_Data_Buff[0];
-		PM25_Data = PM25_Data << 8;
-		PM25_Data += PM25_Data_Buff[1];
+		Pm25_Data = Pm25_Data_Buff[0];
+		Pm25_Data = Pm25_Data << 8;
+		Pm25_Data += Pm25_Data_Buff[1];
 		  
-		PM10_Data = PM25_Data_Buff[2];
-		PM10_Data = PM10_Data << 8;
-		PM10_Data += PM25_Data_Buff[3];	
+		Pm10_Data = Pm25_Data_Buff[2];
+		Pm10_Data = Pm10_Data << 8;
+		Pm10_Data += Pm25_Data_Buff[3];	
 	}
 	else
 	{
-		PM25_Data = 9999;
-		PM10_Data = 9999;
+		Pm25_Data = 9999;
+		Pm10_Data = 9999;
 	}
 	
     HAL_Delay(1000);
@@ -274,20 +273,20 @@ int main(void)
 	sprintf((char *)Lcd_Display_Buff,"%.1f %%",(float)Actual_Humidity_Data/10);  
 	ST7735_PutStr7x11(88,  33,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
 	  
-	sprintf((char *)Lcd_Display_Buff,"%d ppm",ECO2_Data);
+	sprintf((char *)Lcd_Display_Buff,"%d ppm",Eco2_Data);
 	ST7735_PutStr7x11(48,  58,"        ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
 	ST7735_PutStr7x11(48,  58,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",TVOC_Data);
+	sprintf((char *)Lcd_Display_Buff,"%d",Tvoc_Data);
 	ST7735_PutStr7x11(47,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
 	ST7735_PutStr7x11(47,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",CH2O_Data);
+	sprintf((char *)Lcd_Display_Buff,"%d",Ch2o_Data);
 	ST7735_PutStr7x11(124,  83,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
 	ST7735_PutStr7x11(124,  83,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
 	  
-	sprintf((char *)Lcd_Display_Buff,"%d",PM25_Data);
+	sprintf((char *)Lcd_Display_Buff,"%d",Pm25_Data);
 	ST7735_PutStr7x11(47,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
 	ST7735_PutStr7x11(47,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK); 
-	sprintf((char *)Lcd_Display_Buff,"%d",PM10_Data);
+	sprintf((char *)Lcd_Display_Buff,"%d",Pm10_Data);
 	ST7735_PutStr7x11(117,  108,"    ", COLOR565_WHITE_SMOKE,COLOR565_BLACK);
 	ST7735_PutStr7x11(117,  108,Lcd_Display_Buff, COLOR565_WHITE_SMOKE,COLOR565_BLACK);
     HAL_Delay(1000);
@@ -336,6 +335,32 @@ void SystemClock_Config(void)
 /* USER CODE BEGIN 4 */
 
 /* USER CODE END 4 */
+
+ /**
+  * @brief  Period elapsed callback in non blocking mode
+  * @note   This function is called  when TIM1 interrupt took place, inside
+  * HAL_TIM_IRQHandler(). It makes a direct call to HAL_IncTick() to increment
+  * a global variable "uwTick" used as application time base.
+  * @param  htim : TIM handle
+  * @retval None
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  /* USER CODE BEGIN Callback 0 */
+
+  /* USER CODE END Callback 0 */
+  if (htim->Instance == TIM1) {
+    HAL_IncTick();
+  }
+  /* USER CODE BEGIN Callback 1 */
+  
+	//定时器4溢出中断回调
+	if(htim->Instance == TIM4)
+	{
+		Modbus_Timer_Process();
+	}
+  /* USER CODE END Callback 1 */
+}
 
 /**
   * @brief  This function is executed in case of error occurrence.

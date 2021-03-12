@@ -26,6 +26,8 @@ atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal
 atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
+atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 atmosphere_sensor\sht2x_i2c.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 atmosphere_sensor\sht2x_i2c.o: ..\user\bsp_i2c_gpio.h
 atmosphere_sensor\sht2x_i2c.o: d:\Keil_v5\ARM\ARMCC\Bin\..\include\inttypes.h

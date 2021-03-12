@@ -27,4 +27,6 @@ atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_
 atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
+atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 atmosphere_sensor\bsp_i2c_gpio.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h

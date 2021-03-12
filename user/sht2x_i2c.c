@@ -16,12 +16,13 @@ void chip_temperature(void);
 //uint8_t Rx_uart1_buff[32];
 //uint8_t Tx_uart1_buff[32];
 //extern uint8_t Rx_uart2_buff[32];
-extern uint8_t Tx_uart2_buff[32];
+//extern uint8_t Tx_uart2_buff[32];
 ////uint8_t UART1_Transmit_Flag = 0;
 //extern uint8_t UART2_Transmit_Flag;
 //extern uint8_t pp;
 ////===========UART===============
 
+uint8_t Sht20_Exist; //温度传感器是否存在
 int16_t Actual_Temperature_Data; 
 int16_t Actual_Humidity_Data;
 
@@ -95,14 +96,23 @@ void SHT2x_SoftReset(void)
 }
 
 /**
-* @brief 初始化SHT2x
+* @brief 初始化SHT2x,并判断是否存在SHT20传感器
 * @param 
 * 
-* @retval 
+* @retval 返回-1表示初始化失败，或者不存在SHT20传感器
 */
-void SHT2x_Init(void)
+int8_t SHT2x_Init(void)
 {
-	SHT2x_SoftReset();
+    for (unsigned char i = 0; i < 10; i++)
+    {
+		SHT2x_SoftReset();
+		osDelay(50);
+		if(Read_SHT2x_Data(TRIG_TEMP_MEASUREMENT_POLL) != 0xffff)//尝试读取传感器数据来判断。
+			return 0;
+		osDelay(50);
+	}
+	
+	return -1;
 }
 
 
@@ -244,69 +254,76 @@ int16_t Get_SHT2x_Rh(void)
 
 void Task_TH_Sensor(void)
 {
-	int16_t  Read_Data;
+	int16_t Read_Data;
 	uint8_t Read_Temperature_Fail_Counter = 0;
 	uint8_t Read_Humidity_Fail_Counter = 0;
-	i2c_CfgGpio();
-	//延时后重新初始化I2C,避免硬件造成初始化失败
+	
+	i2c_CfgGpio();//初始化i2c端口
 //	HAL_I2C_DeInit(&hi2c1);//释放IO口为GPIO，复位句柄状态标志
-//	MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);          //这句重新初始化I2C控制器
-	osDelay(20);
-	SHT2x_Init(); 
-	osDelay(20);
-	while(1)
+//	MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);//这句重新初始化I2C控制器
+	osDelay(20);//延时后重新初始化SHT20,避免硬件造成初始化失败
+	if (SHT2x_Init() < 0)//初始化温湿度传感器并判断结果
 	{
-		//读取温度
-		Read_Data = Get_SHT2x_Temp();
-		if(Read_Data != -999)
+		Sht20_Exist = 0;//不存在传感器
+		while(1)
 		{
-			Read_Temperature_Fail_Counter = 0;
-			Actual_Temperature_Data = Read_Data;
-//			sprintf((char *)Tx_uart1_buff,"当前温度:%d.%d度，",Read_Data/10,Read_Data%10);//=========串口调试============
-//			HAL_UART_Transmit(&huart1,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
+			osDelay(60000);
 		}
-		else
+	}
+	else
+	{
+		Sht20_Exist = 1;//初始化成功
+		while(1)
 		{
-//			sprintf((char *)Tx_uart2_buff,"当前温度读取错误，");//=========串口调试============
-//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
-			Read_Temperature_Fail_Counter++;
-			if(Read_Temperature_Fail_Counter >= 10)//如果连续读取错误累加值10次，复位I2C和复位SHT2x
+			//读取温度
+			Read_Data = Get_SHT2x_Temp();
+			if(Read_Data != -999)
 			{
 				Read_Temperature_Fail_Counter = 0;
-//				HAL_I2C_DeInit(&hi2c1);        //释放IO口为GPIO，复位句柄状态标志
-//				MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);          //这句重新初始化I2C控制器
-				SHT2x_Init();	
+				Actual_Temperature_Data = Read_Data;
+	//			sprintf((char *)Tx_uart1_buff,"当前温度:%d.%d度，",Read_Data/10,Read_Data%10);//=========串口调试============
+	//			HAL_UART_Transmit(&huart1,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
 			}
-		}
-		
-		//读取湿度
-		Read_Data = Get_SHT2x_Rh();
-		if(Read_Data != -999)
-		{
-			Read_Humidity_Fail_Counter = 0;
-			Actual_Humidity_Data = Read_Data;
-//			sprintf((char *)Tx_uart2_buff,"湿度:%d.%d%%.\r\n",Read_Data/10,Read_Data%10);//=========串口调试============
-//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
-		}
-		else
-		{
-//			sprintf((char *)Tx_uart2_buff,"当前湿度读取错误。\r\n");//=========串口调试============
-//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
-			Read_Humidity_Fail_Counter++;
-			if(Read_Humidity_Fail_Counter >= 10)//如果连续读取错误累加值10次，复位I2C和复位SHT2x
+			else
+			{
+	//			sprintf((char *)Tx_uart2_buff,"当前温度读取错误，");//=========串口调试============
+	//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
+				Read_Temperature_Fail_Counter++;
+				if(Read_Temperature_Fail_Counter >= 10)//如果连续读取错误累加值10次，复位I2C和复位SHT2x
+				{
+					Read_Temperature_Fail_Counter = 0;
+	//				HAL_I2C_DeInit(&hi2c1);        //释放IO口为GPIO，复位句柄状态标志
+	//				MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);          //这句重新初始化I2C控制器
+					SHT2x_Init();	
+				}
+			}
+			
+			//读取湿度
+			Read_Data = Get_SHT2x_Rh();
+			if(Read_Data != -999)
 			{
 				Read_Humidity_Fail_Counter = 0;
-//				HAL_I2C_DeInit(&hi2c1);        //释放IO口为GPIO，复位句柄状态标志
-//				MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);          //这句重新初始化I2C控制器
-				SHT2x_Init();	
+				Actual_Humidity_Data = Read_Data;
+	//			sprintf((char *)Tx_uart2_buff,"湿度:%d.%d%%.\r\n",Read_Data/10,Read_Data%10);//=========串口调试============
+	//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
 			}
-		}			
-		
-		
-		osDelay(1000);
-//		pp = 2;
-//		chip_temperature();		
-		osDelay(1000);
+			else
+			{
+	//			sprintf((char *)Tx_uart2_buff,"当前湿度读取错误。\r\n");//=========串口调试============
+	//			HAL_UART_Transmit(&huart2,Tx_uart2_buff,strlen((char *)Tx_uart2_buff),10000);//=========串口调试============
+				Read_Humidity_Fail_Counter++;
+				if(Read_Humidity_Fail_Counter >= 10)//如果连续读取错误累加值10次，复位I2C和复位SHT2x
+				{
+					Read_Humidity_Fail_Counter = 0;
+	//				HAL_I2C_DeInit(&hi2c1);        //释放IO口为GPIO，复位句柄状态标志
+	//				MX_I2C1_Init();//HAL_I2C_Init(&hi2c1);          //这句重新初始化I2C控制器
+					SHT2x_Init();	
+				}
+			}			
+			
+			osDelay(2000);
+		}
 	}
+
 }
 

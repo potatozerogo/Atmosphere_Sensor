@@ -35,6 +35,8 @@ atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_
 atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_flash_ex.h
 atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_pwr.h
 atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_spi.h
+atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h
+atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim_ex.h
 atmosphere_sensor\freertos.o: ../Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h
 atmosphere_sensor\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 atmosphere_sensor\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h
@@ -49,7 +51,17 @@ atmosphere_sensor\freertos.o: ../Inc/spi.h
 atmosphere_sensor\freertos.o: ..\user\font5x7.h
 atmosphere_sensor\freertos.o: ..\user\font7x11.h
 atmosphere_sensor\freertos.o: ..\user\color565.h
-atmosphere_sensor\freertos.o: ..\user\voc.h
+atmosphere_sensor\freertos.o: ..\user\modbus.h
+atmosphere_sensor\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
+atmosphere_sensor\freertos.o: ..\user\crc16.h
+atmosphere_sensor\freertos.o: ..\user\user_config.h
+atmosphere_sensor\freertos.o: ..\user\tvoc.h
+atmosphere_sensor\freertos.o: ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h
 atmosphere_sensor\freertos.o: ..\user\pm25.h
 atmosphere_sensor\freertos.o: ..\user\sht2x_i2c.h
+atmosphere_sensor\freertos.o: ..\user\bsp_i2c_gpio.h
+atmosphere_sensor\freertos.o: d:\Keil_v5\ARM\ARMCC\Bin\..\include\inttypes.h
 atmosphere_sensor\freertos.o: ..\user\key.h
+atmosphere_sensor\freertos.o: ..\user\display_number.h
+atmosphere_sensor\freertos.o: ..\user\font32x36.h
+atmosphere_sensor\freertos.o: ..\user\data_colour.h
